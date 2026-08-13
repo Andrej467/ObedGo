@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>ObedGo</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f4f6;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#111827}.app{max-width:560px;margin:auto;min-height:100vh;background:#fff;padding:24px 18px 40px}.brand{font-size:32px;font-weight:850;letter-spacing:-1px}.tag{color:#6b7280;margin:2px 0 24px}.card{border:1px solid #e5e7eb;border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 4px 18px #0000000a}.restaurant{font-weight:800;font-size:20px}.muted{color:#6b7280;font-size:14px}.section{font-size:17px;font-weight:800;margin:24px 0 10px}.option{display:block;border:2px solid #e5e7eb;border-radius:14px;padding:14px;margin:9px 0;cursor:pointer}.option:has(input:checked){border-color:#111827;background:#f9fafb}.option input{margin-right:10px}.name{width:100%;padding:14px;border:1px solid #d1d5db;border-radius:12px;font-size:16px}.pay{display:grid;grid-template-columns:1fr 1fr;gap:10px}.button{width:100%;border:0;border-radius:14px;background:#111827;color:white;padding:16px;font-size:17px;font-weight:800;margin-top:24px}.success{display:none;background:#ecfdf5;border:1px solid #a7f3d0;padding:16px;border-radius:14px;margin-top:16px}.price{font-weight:800}.badge{display:inline-block;background:#f3f4f6;border-radius:999px;padding:5px 9px;font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<main class="app">
+<div class="brand">ObedGo</div>
+<div class="tag">Obed na pár kliknutí.</div>
+<div class="card"><div class="restaurant">4M Restaurant</div><div class="muted" id="date"></div><span class="badge">MVP prototyp</span></div>
+<label class="section" for="name">Tvoje meno</label>
+<input class="name" id="name" placeholder="Meno a priezvisko">
+<div class="section">Vyber polievku</div>
+<label class="option"><input type="radio" name="soup" value="Polievka 1">Polievka 1</label>
+<label class="option"><input type="radio" name="soup" value="Polievka 2">Polievka 2</label>
+<div class="section">Vyber hlavné jedlo</div>
+<label class="option"><input type="radio" name="meal" value="Menu 1"><b>Menu 1</b> <span class="muted">— dnešná ponuka</span></label>
+<label class="option"><input type="radio" name="meal" value="Menu 2"><b>Menu 2</b> <span class="muted">— dnešná ponuka</span></label>
+<label class="option"><input type="radio" name="meal" value="Menu 3"><b>Menu 3</b> <span class="muted">— dnešná ponuka</span></label>
+<label class="option"><input type="radio" name="meal" value="Menu 4"><b>Menu 4</b> <span class="muted">— dnešná ponuka</span></label>
+<div class="section">Spôsob platby</div>
+<div class="pay">
+<label class="option"><input type="radio" name="pay" value="Hotovosť">Hotovosť</label>
+<label class="option"><input type="radio" name="pay" value="Prevod">Prevod</label>
+</div>
+<div class="card"><span class="muted">Cena obeda</span><div class="price">6,20 € / osoba</div></div>
+<button class="button" id="order">OBJEDNAŤ OBED</button>
+<div class="success" id="success"></div>
+</main>
+<script>
+const d=new Date();document.getElementById('date').textContent=d.toLocaleDateString('sk-SK',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+document.getElementById('order').onclick=()=>{const name=document.getElementById('name').value.trim(),s=document.querySelector('input[name=soup]:checked'),m=document.querySelector('input[name=meal]:checked'),p=document.querySelector('input[name=pay]:checked');if(!name||!s||!m||!p){alert('Vyplň meno, polievku, menu a spôsob platby.');return}const order={name,soup:s.value,meal:m.value,payment:p.value,date:new Date().toISOString()};localStorage.setItem('obedgo-last-order',JSON.stringify(order));const box=document.getElementById('success');box.style.display='block';box.innerHTML='<b>Objednávka uložená ✓</b><br>'+name+' · '+s.value+' · '+m.value+' · '+p.value+'<br><span class="muted">V tejto MVP verzii sa objednávka ukladá iba v tomto zariadení.</span>';box.scrollIntoView({behavior:'smooth'})}
+</script>
+</body></html>
