@@ -6,14 +6,14 @@
 <meta name="theme-color" content="#111827">
 <title>ObedGo</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f3f4f6;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#111827}.app{max-width:560px;margin:auto;min-height:100vh;background:#fff;padding:24px 18px 40px}.brand{font-size:32px;font-weight:850;letter-spacing:-1px}.tag{color:#6b7280;margin:2px 0 24px}.card{border:1px solid #e5e7eb;border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 4px 18px #0000000a}.restaurant{font-weight:800;font-size:20px}.muted{color:#6b7280;font-size:14px}.section{font-size:17px;font-weight:800;margin:24px 0 10px}.option{display:block;border:2px solid #e5e7eb;border-radius:14px;padding:14px;margin:9px 0;cursor:pointer}.option:has(input:checked){border-color:#111827;background:#f9fafb}.option input{margin-right:10px}.name{width:100%;padding:14px;border:1px solid #d1d5db;border-radius:12px;font-size:16px}.pay{display:grid;grid-template-columns:1fr 1fr;gap:10px}.button{width:100%;border:0;border-radius:14px;background:#111827;color:white;padding:16px;font-size:17px;font-weight:800;margin-top:24px}.success{display:none;background:#ecfdf5;border:1px solid #a7f3d0;padding:16px;border-radius:14px;margin-top:16px}.price{font-weight:800}.badge{display:inline-block;background:#f3f4f6;border-radius:999px;padding:5px 9px;font-size:13px;margin-top:8px}
+*{box-sizing:border-box}body{margin:0;background:#f3f4f6;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#111827}.app{max-width:560px;margin:auto;min-height:100vh;background:#fff;padding:24px 18px 40px}.brand{font-size:32px;font-weight:850;letter-spacing:-1px}.tag{color:#6b7280;margin:2px 0 24px}.card{border:1px solid #e5e7eb;border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 4px 18px #0000000a}.restaurant{font-weight:800;font-size:20px}.muted{color:#6b7280;font-size:14px}.section{font-size:17px;font-weight:800;margin:24px 0 10px}.option{display:block;border:2px solid #e5e7eb;border-radius:14px;padding:14px;margin:9px 0;cursor:pointer}.option:has(input:checked){border-color:#111827;background:#f9fafb}.option input{margin-right:10px}.name{width:100%;padding:14px;border:1px solid #d1d5db;border-radius:12px;font-size:16px}.pay{display:grid;grid-template-columns:1fr 1fr;gap:10px}.button{width:100%;border:0;border-radius:14px;background:#111827;color:white;padding:16px;font-size:17px;font-weight:800;margin-top:24px}.button:disabled{opacity:.6}.success{display:none;background:#ecfdf5;border:1px solid #a7f3d0;padding:16px;border-radius:14px;margin-top:16px}.error{display:none;background:#fef2f2;border:1px solid #fecaca;padding:16px;border-radius:14px;margin-top:16px}.price{font-weight:800}.badge{display:inline-block;background:#f3f4f6;border-radius:999px;padding:5px 9px;font-size:13px;margin-top:8px}
 </style>
 </head>
 <body>
 <main class="app">
 <div class="brand">ObedGo</div>
 <div class="tag">Obed na pár kliknutí.</div>
-<div class="card"><div class="restaurant">4M Restaurant</div><div class="muted" id="date"></div><span class="badge">MVP prototyp</span></div>
+<div class="card"><div class="restaurant">4M Restaurant</div><div class="muted" id="date"></div><span class="badge">Online objednávka</span></div>
 <label class="section" for="name">Tvoje meno</label>
 <input class="name" id="name" placeholder="Meno a priezvisko">
 <div class="section">Vyber polievku</div>
@@ -32,9 +32,27 @@
 <div class="card"><span class="muted">Cena obeda</span><div class="price">6,20 € / osoba</div></div>
 <button class="button" id="order">OBJEDNAŤ OBED</button>
 <div class="success" id="success"></div>
+<div class="error" id="error"></div>
 </main>
+<script src="config.js"></script>
 <script>
-const d=new Date();document.getElementById('date').textContent=d.toLocaleDateString('sk-SK',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-document.getElementById('order').onclick=()=>{const name=document.getElementById('name').value.trim(),s=document.querySelector('input[name=soup]:checked'),m=document.querySelector('input[name=meal]:checked'),p=document.querySelector('input[name=pay]:checked');if(!name||!s||!m||!p){alert('Vyplň meno, polievku, menu a spôsob platby.');return}const order={name,soup:s.value,meal:m.value,payment:p.value,date:new Date().toISOString()};localStorage.setItem('obedgo-last-order',JSON.stringify(order));const box=document.getElementById('success');box.style.display='block';box.innerHTML='<b>Objednávka uložená ✓</b><br>'+name+' · '+s.value+' · '+m.value+' · '+p.value+'<br><span class="muted">V tejto MVP verzii sa objednávka ukladá iba v tomto zariadení.</span>';box.scrollIntoView({behavior:'smooth'})}
+const d=new Date();
+document.getElementById('date').textContent=d.toLocaleDateString('sk-SK',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+document.getElementById('order').onclick=async()=>{
+  const btn=document.getElementById('order'),ok=document.getElementById('success'),err=document.getElementById('error');
+  ok.style.display='none';err.style.display='none';
+  const name=document.getElementById('name').value.trim(),s=document.querySelector('input[name=soup]:checked'),m=document.querySelector('input[name=meal]:checked'),p=document.querySelector('input[name=pay]:checked');
+  if(!name||!s||!m||!p){alert('Vyplň meno, polievku, menu a spôsob platby.');return}
+  if(!window.OBEDGO_CONFIG||!OBEDGO_CONFIG.supabaseKey||OBEDGO_CONFIG.supabaseKey.includes('PASTE_')){err.style.display='block';err.textContent='Databázové pripojenie ešte nie je dokončené.';return}
+  btn.disabled=true;btn.textContent='ODOSIELAM...';
+  const payload={employee_name:name,restaurant:'4M Restaurant',soup:s.value,meal:m.value,price:6.20,payment_method:p.value,order_date:new Date().toISOString().slice(0,10)};
+  try{
+    const r=await fetch(OBEDGO_CONFIG.supabaseUrl+'/rest/v1/orders',{method:'POST',headers:{'Content-Type':'application/json','apikey':OBEDGO_CONFIG.supabaseKey,'Authorization':'Bearer '+OBEDGO_CONFIG.supabaseKey,'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error(await r.text());
+    ok.style.display='block';ok.innerHTML='<b>Objednávka bola odoslaná ✓</b><br>'+name+' · '+s.value+' · '+m.value+' · '+p.value;
+    ok.scrollIntoView({behavior:'smooth'});
+  }catch(e){err.style.display='block';err.textContent='Objednávku sa nepodarilo odoslať. Skús to znova.';console.error(e)}finally{btn.disabled=false;btn.textContent='OBJEDNAŤ OBED'}
+};
 </script>
 </body></html>
