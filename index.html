@@ -13,7 +13,7 @@
 <main class="app">
 <div class="brand">Obed<b>Go</b></div>
 <div class="tag">Obed na pár kliknutí.</div>
-<div class="hero"><div class="date">Štvrtok 13. 8. 2026</div><div class="restaurant">4M Restaurant · Trenčín</div></div>
+<div class="hero"><div class="date">Načítavam dnešné menu…</div><div class="restaurant">4M Restaurant · Trenčín</div></div>
 <div id="status" class="status"></div>
 <div class="section">Tvoje meno</div><input class="field" id="name" placeholder="Meno a priezvisko" autocomplete="name">
 <div class="section">Tvoje obedy</div><div class="hint">Môžeš objednať viac obedov. Každý obed môže mať inú polievku a menu.</div>
@@ -30,12 +30,23 @@
 <script src="config.js"></script>
 <script>
 const PRICE=6.20;
-const SOUPS=['Hubová kyslá so zemiakmi','Karfiolová číra s hráškom a pórkom'];
-const MEALS=[
-'MENU 1 – Zemiaková placka plnená jemne pikantným kuracím soté, strúhaný syr, ryža, hranolky',
-'MENU 2 – Grilovaná bravčová panenka, parená brokolica na masle s parmezánom, mäsovo-slivková omáčka, dusená ryža',
-'MENU 3 – Spaghetti alla Toscana – rajčiny, mascarpone, prosciutto, olivy, cuketa, baklažán, strúhaný syr'
-];
+let SOUPS=[];
+let MEALS=[];
+function bratislavaDate(){
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Bratislava',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const o=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+ return `${o.year}-${o.month}-${o.day}`;
+}
+function prettyDate(iso,weekday){const [y,m,d]=iso.split('-').map(Number);return `${weekday} ${d}. ${m}. ${y}`}
+async function loadDailyMenu(){
+ const today=bratislavaDate();
+ const r=await fetch(`${OBEDGO_CONFIG.supabaseUrl}/rest/v1/daily_menu?menu_date=eq.${today}&select=menu_date,restaurant,weekday,soup_1,soup_2,meals`,{headers:{'apikey':OBEDGO_CONFIG.supabaseKey,'Authorization':'Bearer '+OBEDGO_CONFIG.supabaseKey}});
+ if(!r.ok)throw new Error(await r.text());
+ const rows=await r.json(); if(!rows.length)throw new Error('NO_MENU');
+ const d=rows[0]; SOUPS=[d.soup_1,d.soup_2]; MEALS=Array.isArray(d.meals)?d.meals:[];
+ document.querySelector('.hero .date').textContent=prettyDate(d.menu_date,d.weekday);
+ document.querySelector('.hero .restaurant').textContent=(d.restaurant||'4M Restaurant')+' · Trenčín';
+}
 const itemsEl=document.getElementById('items'),nameEl=document.getElementById('name'),summaryEl=document.getElementById('summary'),saveBtn=document.getElementById('save'),cancelBtn=document.getElementById('cancel'),successEl=document.getElementById('success'),errorEl=document.getElementById('error'),infoEl=document.getElementById('info'),statusEl=document.getElementById('status');
 let clientToken=localStorage.getItem('obedgo-client-token'); if(!clientToken){clientToken=crypto.randomUUID();localStorage.setItem('obedgo-client-token',clientToken)}
 nameEl.value=localStorage.getItem('obedgo-name')||'';
@@ -59,7 +70,11 @@ async function loadExisting(){try{const d=await rpc('get_my_order',{p_client_tok
 document.getElementById('add').onclick=()=>addItem();
 saveBtn.onclick=async()=>{successEl.style.display=errorEl.style.display=infoEl.style.display='none';const name=nameEl.value.trim(),pay=document.querySelector('input[name="pay"]:checked'),items=collectItems();if(!name||!pay||!items){alert('Vyplň meno, všetky polievky, všetky menu a platbu.');return}saveBtn.disabled=true;saveBtn.textContent='UKLADÁM...';try{localStorage.setItem('obedgo-name',name);const d=await rpc('save_my_order',{p_client_token:clientToken,p_employee_name:name,p_payment_method:pay.value,p_items:items,p_restaurant:'4M Restaurant'});successEl.style.display='block';successEl.innerHTML=`<b>Objednávka uložená ✓</b><br>${d.meal_count} obed(y) · ${Number(d.total).toFixed(2).replace('.',',')} €`;cancelBtn.style.display='block';saveBtn.textContent='ULOŽIŤ ZMENY';statusEl.style.display='block';statusEl.innerHTML='<b>Moja dnešná objednávka</b><br>Môžeš ju upraviť alebo zrušiť do 09:00.'}catch(e){errorEl.style.display='block';errorEl.textContent='Objednávku sa nepodarilo uložiť. Ak je po 09:00, objednávanie je uzavreté.';console.error(e)}finally{saveBtn.disabled=false}};
 cancelBtn.onclick=async()=>{if(!confirm('Naozaj chceš zrušiť dnešnú objednávku?'))return;cancelBtn.disabled=true;try{await rpc('cancel_my_order',{p_client_token:clientToken});infoEl.style.display='block';infoEl.innerHTML='<b>Objednávka bola zrušená.</b>';statusEl.style.display='block';statusEl.innerHTML='<b>Dnešná objednávka je zrušená.</b>';cancelBtn.style.display='none';saveBtn.textContent='OBJEDNAŤ ZNOVA'}catch(e){errorEl.style.display='block';errorEl.textContent='Objednávku sa nepodarilo zrušiť. Ak je po 09:00, už ju nemožno meniť.';console.error(e)}finally{cancelBtn.disabled=false}};
-addItem();loadExisting();
+async function startApp(){
+ try{await loadDailyMenu();addItem();await loadExisting()}
+ catch(e){console.error(e);document.getElementById('add').disabled=true;saveBtn.disabled=true;saveBtn.textContent='MENU NIE JE DOSTUPNÉ';statusEl.style.display='block';statusEl.innerHTML='<b>Aktuálne menu ešte nie je dostupné.</b><br>Skús ObedGo otvoriť neskôr.'}
+}
+startApp();
 </script>
 </body>
 </html>
