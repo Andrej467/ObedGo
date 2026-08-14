@@ -1,0 +1,32 @@
+name: Update 4M weekly menu
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub cron uses UTC. 06:10 UTC = 08:10 CEST / 07:10 CET.
+    # The importer validates the week in the PDF, so stale PDFs are never written.
+    - cron: '10 6 * * 1-5'
+
+permissions:
+  contents: read
+
+jobs:
+  update-menu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install importer dependencies
+        run: pip install requests beautifulsoup4 pymupdf
+
+      - name: Import current 4M menu to Supabase
+        env:
+          OBEDGO_MENU_TOKEN: ${{ secrets.OBEDGO_MENU_TOKEN }}
+        run: python scripts/update_menu.py
