@@ -6,11 +6,9 @@ import requests
 from bs4 import BeautifulSoup
 import fitz  # PyMuPDF
 
-RESTAURANT_URL = "https://superobed.sk/podnik/4m-restaurant/"
 MENU_URL = "https://superobed.sk/podnik/4m-restaurant/denne-menu"
 SUPABASE_URL = "https://qbwrfortjvzqtdiupgva.supabase.co"
-SUPABASE_KEY = "sb_publishable_jG63reY8x1wJbF3FGf9few_mcbZGDGU"
-UPDATE_TOKEN = os.environ["OBEDGO_MENU_TOKEN"]
+SERVICE_ROLE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 PRICE = 6.20
 DAYS = ["PONDELOK", "UTOROK", "STREDA", "ŠTVRTOK", "PIATOK"]
 DAY_LABELS = ["Pondelok", "Utorok", "Streda", "Štvrtok", "Piatok"]
@@ -21,8 +19,7 @@ def fetch_pdf_url():
     s.headers.update({"User-Agent": "Mozilla/5.0 ObedGo/1.0"})
     r = s.get(MENU_URL, timeout=30, allow_redirects=True)
     r.raise_for_status()
-    html = r.text
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(r.text, "html.parser")
 
     candidates = []
     for tag in soup.find_all(["a", "iframe", "embed", "object", "source"]):
@@ -31,20 +28,11 @@ def fetch_pdf_url():
             if v:
                 candidates.append(urljoin(r.url, v))
 
-    candidates += re.findall(r"https?://[^\"'\s>]+", html)
-    candidates += [urljoin(r.url, x) for x in re.findall(r"(?:href|src|data)=[\"']([^\"']+)[\"']", html, re.I)]
-
-    pdfs = []
-    for u in candidates:
-        clean = u.split("#")[0]
-        if ".pdf" in clean.lower() or "pdf" in clean.lower():
-            pdfs.append(clean)
-
-    # Deduplicate while preserving order.
     seen = set()
-    pdfs = [u for u in pdfs if not (u in seen or seen.add(u))]
-
-    for u in pdfs:
+    for u in candidates:
+        if u in seen:
+            continue
+        seen.add(u)
         try:
             rr = s.get(u, timeout=30, allow_redirects=True)
             ctype = rr.headers.get("content-type", "").lower()
@@ -53,31 +41,7 @@ def fetch_pdf_url():
         except requests.RequestException:
             pass
 
-    # Sometimes a PDF URL is exposed only after following a current menu link.
-    for a in soup.find_all("a", href=True):
-        href = urljoin(r.url, a["href"])
-        if "denne-menu" not in href:
-            continue
-        try:
-            rr = s.get(href, timeout=30, allow_redirects=True)
-            ss = BeautifulSoup(rr.text, "html.parser")
-            for tag in ss.find_all(["a", "iframe", "embed", "object", "source"]):
-                for attr in ("href", "src", "data"):
-                    v = tag.get(attr)
-                    if not v:
-                        continue
-                    u = urljoin(rr.url, v)
-                    try:
-                        pr = s.get(u, timeout=30, allow_redirects=True)
-                        ctype = pr.headers.get("content-type", "").lower()
-                        if pr.ok and ("pdf" in ctype or pr.content[:4] == b"%PDF"):
-                            return pr.url, pr.content
-                    except requests.RequestException:
-                        pass
-        except requests.RequestException:
-            pass
-
-    raise RuntimeError("Nenašiel som PDF menu na stránke Superobed.")
+    raise RuntimeError("Nenašiel som aktuálne PDF menu na stránke Superobed.")
 
 
 def pdf_text(pdf_bytes):
@@ -116,11 +80,7 @@ def parse_day(lines):
     if menu_start is None:
         raise ValueError("Chýba MENU 1")
 
-    soup_lines = []
-    for x in lines[:menu_start]:
-        if re.match(r"^(PRE VEGETARIÁNOV|PRE VEGETARIANOV)", x, re.I):
-            continue
-        soup_lines.append(x)
+    soup_lines = [x for x in lines[:menu_start] if not re.match(r"^(PRE VEGETARIÁNOV|PRE VEGETARIANOV)", x, re.I)]
     if len(soup_lines) < 2:
         raise ValueError("Nenašli sa dve polievky")
     soup1, soup2 = soup_lines[0], soup_lines[1]
@@ -151,9 +111,7 @@ def parse_week_range(text):
         raise ValueError("Nenašiel som rozsah týždňa v hlavičke PDF")
     d1, m1, d2, m2, year = m.groups()
     year = int(year or date.today().year)
-    start = date(year, int(m1), int(d1))
-    end = date(year, int(m2), int(d2))
-    return start, end
+    return date(year, int(m1), int(d1)), date(year, int(m2), int(d2))
 
 
 def validate_current_week(start, end):
@@ -182,12 +140,11 @@ def upsert_week(start, end, parsed, source_url):
     r = requests.post(
         f"{SUPABASE_URL}/rest/v1/rpc/import_weekly_menu",
         headers={
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "apikey": SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {SERVICE_ROLE_KEY}",
             "Content-Type": "application/json",
         },
         json={
-            "p_token": UPDATE_TOKEN,
             "p_week_start": start.isoformat(),
             "p_week_end": end.isoformat(),
             "p_source_url": source_url,
