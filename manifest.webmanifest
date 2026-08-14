@@ -1,0 +1,10 @@
+{
+"name":"ObedGo",
+"short_name":"ObedGo",
+"start_url":"./",
+"scope":"./",
+"display":"standalone",
+"background_color":"#ffffff",
+"theme_color":"#ffffff",
+"description":"Interné objednávanie obedov"
+}
