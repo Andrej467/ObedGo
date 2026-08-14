@@ -28,5 +28,5 @@ jobs:
 
       - name: Import current 4M menu to Supabase
         env:
-          OBEDGO_MENU_TOKEN: ${{ secrets.OBEDGO_MENU_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/update_menu.py
