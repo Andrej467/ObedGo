@@ -40,7 +40,7 @@ function bratislavaDate(){
 function prettyDate(iso,weekday){const [y,m,d]=iso.split('-').map(Number);return `${weekday} ${d}. ${m}. ${y}`}
 async function loadDailyMenu(){
  const today=bratislavaDate();
- const r=await fetch(`${OBEDGO_CONFIG.supabaseUrl}/rest/v1/daily_menu?menu_date=eq.${today}&select=menu_date,restaurant,weekday,soup_1,soup_2,meals`,{headers:{'apikey':OBEDGO_CONFIG.supabaseKey,'Authorization':'Bearer '+OBEDGO_CONFIG.supabaseKey}});
+ const r=await fetch(`${OBEDGO_CONFIG.supabaseUrl}/rest/v1/daily_menu?menu_date=eq.${today}&select=menu_date,restaurant,weekday,soup_1,soup_2,meals`,{cache:'no-store',headers:{'apikey':OBEDGO_CONFIG.supabaseKey,'Authorization':'Bearer '+OBEDGO_CONFIG.supabaseKey}});
  if(!r.ok)throw new Error(await r.text());
  const rows=await r.json(); if(!rows.length)throw new Error('NO_MENU');
  const d=rows[0]; SOUPS=[d.soup_1,d.soup_2]; MEALS=Array.isArray(d.meals)?d.meals:[];
@@ -75,6 +75,15 @@ async function startApp(){
  catch(e){console.error(e);document.getElementById('add').disabled=true;saveBtn.disabled=true;saveBtn.textContent='MENU NIE JE DOSTUPNÉ';statusEl.style.display='block';statusEl.innerHTML='<b>Aktuálne menu ešte nie je dostupné.</b><br>Skús ObedGo otvoriť neskôr.'}
 }
 startApp();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'})
+      .then(reg => reg.update())
+      .catch(console.error);
+  });
+}
 </script>
 </body>
 </html>
