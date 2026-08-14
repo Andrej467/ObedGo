@@ -3,9 +3,10 @@ name: Update 4M weekly menu
 on:
   workflow_dispatch:
   schedule:
-    # GitHub cron uses UTC. 06:10 UTC = 08:10 CEST / 07:10 CET.
-    # The importer validates the week in the PDF, so stale PDFs are never written.
-    - cron: '10 6 * * 1-5'
+    # GitHub cron uses UTC. These two runs guarantee one refresh at 06:45 local time
+    # in Slovakia in both summer (CEST) and winter (CET).
+    - cron: '45 4 * * 1-5'
+    - cron: '45 5 * * 1-5'
 
 permissions:
   contents: read
