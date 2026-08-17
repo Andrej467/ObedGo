@@ -26,7 +26,7 @@
 <button class="button" id="save">ULOŽIŤ OBJEDNÁVKU</button>
 <button class="button danger" id="cancel" style="display:none">ZRUŠIŤ OBJEDNÁVKU</button>
 <div class="success" id="success"></div><div class="error" id="error"></div><div class="info" id="info"></div>
-<div class="notice">Objednávku môžeš upraviť alebo zrušiť do 09:00. Potom sa uzamkne.</div>
+<div class="notice">Objednávku môžeš upraviť alebo zrušiť do 09:15. Potom sa uzamkne.</div>
 </main>
 <script src="config.js"></script>
 <script>
@@ -51,41 +51,22 @@ async function loadDailyMenu(){
 const itemsEl=document.getElementById('items'),nameEl=document.getElementById('name'),summaryEl=document.getElementById('summary'),saveBtn=document.getElementById('save'),cancelBtn=document.getElementById('cancel'),successEl=document.getElementById('success'),errorEl=document.getElementById('error'),infoEl=document.getElementById('info'),statusEl=document.getElementById('status'),refreshBtn=document.getElementById('refresh');
 let clientToken=localStorage.getItem('obedgo-client-token'); if(!clientToken){clientToken=crypto.randomUUID();localStorage.setItem('obedgo-client-token',clientToken)}
 nameEl.value=localStorage.getItem('obedgo-name')||'';
-
-function mealCard(index,data={}){
- const div=document.createElement('div');div.className='meal-card';div.dataset.index=index;
- div.innerHTML=`<div class="meal-head"><div class="meal-title">Obed ${index+1}</div>${index>0?'<button class="remove" type="button">Odstrániť</button>':''}</div>
- <div class="hint" style="margin-top:10px">Polievka</div>
- ${SOUPS.map(s=>`<label class="option"><input type="radio" name="soup-${index}" value="${s}" ${data.soup===s?'checked':''}><span class="title">${s}</span></label>`).join('')}
- <div class="hint" style="margin-top:12px">Hlavné jedlo</div>
- ${MEALS.map(m=>{const p=m.split(' – ');return `<label class="option"><input type="radio" name="meal-${index}" value="${m}" ${data.meal===m?'checked':''}><span class="title">${p[0]}</span><span class="desc">${p.slice(1).join(' – ')}</span></label>`}).join('')}`;
- const rem=div.querySelector('.remove');if(rem)rem.onclick=()=>{div.remove();renumber();updateSummary()};
- return div
-}
+function mealCard(index,data={}){const div=document.createElement('div');div.className='meal-card';div.dataset.index=index;div.innerHTML=`<div class="meal-head"><div class="meal-title">Obed ${index+1}</div>${index>0?'<button class="remove" type="button">Odstrániť</button>':''}</div><div class="hint" style="margin-top:10px">Polievka</div>${SOUPS.map(s=>`<label class="option"><input type="radio" name="soup-${index}" value="${s}" ${data.soup===s?'checked':''}><span class="title">${s}</span></label>`).join('')}<div class="hint" style="margin-top:12px">Hlavné jedlo</div>${MEALS.map(m=>{const p=m.split(' – ');return `<label class="option"><input type="radio" name="meal-${index}" value="${m}" ${data.meal===m?'checked':''}><span class="title">${p[0]}</span><span class="desc">${p.slice(1).join(' – ')}</span></label>`}).join('')}`;const rem=div.querySelector('.remove');if(rem)rem.onclick=()=>{div.remove();renumber();updateSummary()};return div}
 function renumber(){[...itemsEl.children].forEach((c,i)=>{c.dataset.index=i;c.querySelector('.meal-title').textContent='Obed '+(i+1);c.querySelectorAll('input').forEach(inp=>{if(inp.name.startsWith('soup-'))inp.name='soup-'+i;if(inp.name.startsWith('meal-'))inp.name='meal-'+i})})}
 function updateSummary(){const n=itemsEl.children.length;summaryEl.textContent=`${n} ${n===1?'obed':n<5?'obedy':'obedov'} · ${(n*PRICE).toFixed(2).replace('.',',')} €`}
 function addItem(data={}){if(itemsEl.children.length>=10){alert('Maximálne 10 obedov.');return}itemsEl.appendChild(mealCard(itemsEl.children.length,data));updateSummary()}
 function collectItems(){const out=[];for(const [i,c] of [...itemsEl.children].entries()){const s=c.querySelector(`input[name="soup-${i}"]:checked`),m=c.querySelector(`input[name="meal-${i}"]:checked`);if(!s||!m)return null;out.push({soup:s.value,meal:m.value})}return out}
 async function rpc(fn,body){const r=await fetch(`${OBEDGO_CONFIG.supabaseUrl}/rest/v1/rpc/${fn}`,{method:'POST',headers:{'Content-Type':'application/json','apikey':OBEDGO_CONFIG.supabaseKey,'Authorization':'Bearer '+OBEDGO_CONFIG.supabaseKey},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text());return await r.json()}
-async function loadExisting(){try{const d=await rpc('get_my_order',{p_client_token:clientToken});if(!d)return;statusEl.style.display='block';if(d.status==='cancelled'){statusEl.innerHTML='<b>Dnešná objednávka je zrušená.</b>';return}statusEl.innerHTML=`<b>Moja dnešná objednávka</b><br>${d.meal_count} obed(y) · ${Number(d.total).toFixed(2).replace('.',',')} €<br>${d.editable?'Môžeš ju upraviť do 09:00.':'Objednávka je uzamknutá.'}`;nameEl.value=d.employee_name||nameEl.value;localStorage.setItem('obedgo-name',nameEl.value);document.querySelector(`input[name="pay"][value="${d.payment_method}"]`)?.click();itemsEl.innerHTML='';(d.items||[]).forEach(it=>addItem(it));if(!d.editable){saveBtn.disabled=true;saveBtn.textContent='OBJEDNÁVKA UZAMKNUTÁ';cancelBtn.style.display='none';document.querySelectorAll('input,#add,.remove').forEach(el=>el.disabled=true)}else{cancelBtn.style.display='block';saveBtn.textContent='ULOŽIŤ ZMENY'}}catch(e){console.error(e)}}
+async function loadExisting(){try{const d=await rpc('get_my_order',{p_client_token:clientToken});if(!d)return;statusEl.style.display='block';if(d.status==='cancelled'){statusEl.innerHTML='<b>Dnešná objednávka je zrušená.</b>';return}statusEl.innerHTML=`<b>Moja dnešná objednávka</b><br>${d.meal_count} obed(y) · ${Number(d.total).toFixed(2).replace('.',',')} €<br>${d.editable?'Môžeš ju upraviť do 09:15.':'Objednávka je uzamknutá.'}`;nameEl.value=d.employee_name||nameEl.value;localStorage.setItem('obedgo-name',nameEl.value);document.querySelector(`input[name="pay"][value="${d.payment_method}"]`)?.click();itemsEl.innerHTML='';(d.items||[]).forEach(it=>addItem(it));if(!d.editable){saveBtn.disabled=true;saveBtn.textContent='OBJEDNÁVKA UZAMKNUTÁ';cancelBtn.style.display='none';document.querySelectorAll('input,#add,.remove').forEach(el=>el.disabled=true)}else{cancelBtn.style.display='block';saveBtn.textContent='ULOŽIŤ ZMENY'}}catch(e){console.error(e)}}
 document.getElementById('add').onclick=()=>addItem();
 refreshBtn.onclick=()=>{refreshBtn.disabled=true;refreshBtn.textContent='🔄 OBNOVUJEM...';const url=new URL(window.location.href);url.searchParams.set('v',Date.now().toString());window.location.replace(url.toString())};
-saveBtn.onclick=async()=>{successEl.style.display=errorEl.style.display=infoEl.style.display='none';const name=nameEl.value.trim(),pay=document.querySelector('input[name="pay"]:checked'),items=collectItems();if(!name||!pay||!items){alert('Vyplň meno, všetky polievky, všetky menu a platbu.');return}saveBtn.disabled=true;saveBtn.textContent='UKLADÁM...';try{localStorage.setItem('obedgo-name',name);const d=await rpc('save_my_order',{p_client_token:clientToken,p_employee_name:name,p_payment_method:pay.value,p_items:items,p_restaurant:'4M Restaurant'});successEl.style.display='block';successEl.innerHTML=`<b>Objednávka uložená ✓</b><br>${d.meal_count} obed(y) · ${Number(d.total).toFixed(2).replace('.',',')} €`;cancelBtn.style.display='block';saveBtn.textContent='ULOŽIŤ ZMENY';statusEl.style.display='block';statusEl.innerHTML='<b>Moja dnešná objednávka</b><br>Môžeš ju upraviť alebo zrušiť do 09:00.'}catch(e){errorEl.style.display='block';errorEl.textContent='Objednávku sa nepodarilo uložiť. Ak je po 09:00, objednávanie je uzavreté.';console.error(e)}finally{saveBtn.disabled=false}};
-cancelBtn.onclick=async()=>{if(!confirm('Naozaj chceš zrušiť dnešnú objednávku?'))return;cancelBtn.disabled=true;try{await rpc('cancel_my_order',{p_client_token:clientToken});infoEl.style.display='block';infoEl.innerHTML='<b>Objednávka bola zrušená.</b>';statusEl.style.display='block';statusEl.innerHTML='<b>Dnešná objednávka je zrušená.</b>';cancelBtn.style.display='none';saveBtn.textContent='OBJEDNAŤ ZNOVA'}catch(e){errorEl.style.display='block';errorEl.textContent='Objednávku sa nepodarilo zrušiť. Ak je po 09:00, už ju nemožno meniť.';console.error(e)}finally{cancelBtn.disabled=false}};
-async function startApp(){
- try{await loadDailyMenu();addItem();await loadExisting()}
- catch(e){console.error(e);document.getElementById('add').disabled=true;saveBtn.disabled=true;saveBtn.textContent='MENU NIE JE DOSTUPNÉ';statusEl.style.display='block';statusEl.innerHTML='<b>Aktuálne menu ešte nie je dostupné.</b><br>Skús ObedGo otvoriť neskôr.'}
-}
+saveBtn.onclick=async()=>{successEl.style.display=errorEl.style.display=infoEl.style.display='none';const name=nameEl.value.trim(),pay=document.querySelector('input[name="pay"]:checked'),items=collectItems();if(!name||!pay||!items){alert('Vyplň meno, všetky polievky, všetky menu a platbu.');return}saveBtn.disabled=true;saveBtn.textContent='UKLADÁM...';try{localStorage.setItem('obedgo-name',name);const d=await rpc('save_my_order',{p_client_token:clientToken,p_employee_name:name,p_payment_method:pay.value,p_items:items,p_restaurant:'4M Restaurant'});successEl.style.display='block';successEl.innerHTML=`<b>Objednávka uložená ✓</b><br>${d.meal_count} obed(y) · ${Number(d.total).toFixed(2).replace('.',',')} €`;cancelBtn.style.display='block';saveBtn.textContent='ULOŽIŤ ZMENY';statusEl.style.display='block';statusEl.innerHTML='<b>Moja dnešná objednávka</b><br>Môžeš ju upraviť alebo zrušiť do 09:15.'}catch(e){errorEl.style.display='block';errorEl.textContent='Objednávku sa nepodarilo uložiť. Ak je po 09:15, objednávanie je uzavreté.';console.error(e)}finally{saveBtn.disabled=false}};
+cancelBtn.onclick=async()=>{if(!confirm('Naozaj chceš zrušiť dnešnú objednávku?'))return;cancelBtn.disabled=true;try{await rpc('cancel_my_order',{p_client_token:clientToken});infoEl.style.display='block';infoEl.innerHTML='<b>Objednávka bola zrušená.</b>';statusEl.style.display='block';statusEl.innerHTML='<b>Dnešná objednávka je zrušená.</b>';cancelBtn.style.display='none';saveBtn.textContent='OBJEDNAŤ ZNOVA'}catch(e){errorEl.style.display='block';errorEl.textContent='Objednávku sa nepodarilo zrušiť. Ak je po 09:15, už ju nemožno meniť.';console.error(e)}finally{cancelBtn.disabled=false}};
+async function startApp(){try{await loadDailyMenu();addItem();await loadExisting()}catch(e){console.error(e);document.getElementById('add').disabled=true;saveBtn.disabled=true;saveBtn.textContent='MENU NIE JE DOSTUPNÉ';statusEl.style.display='block';statusEl.innerHTML='<b>Aktuálne menu ešte nie je dostupné.</b><br>Skús ObedGo otvoriť neskôr.'}}
 startApp();
 </script>
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'})
-      .then(reg => reg.update())
-      .catch(console.error);
-  });
-}
+if ('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'}).then(reg => reg.update()).catch(console.error);});}
 </script>
 </body>
 </html>
