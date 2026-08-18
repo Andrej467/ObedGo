@@ -1,2 +1,13 @@
 window.OBEDGO_CONFIG={supabaseUrl:'https://qbwrfortjvzqtdiupgva.supabase.co',supabaseKey:'sb_publishable_jG63reY8x1wJbF3FGf9few_mcbZGDGU'};
+
+// Do not show the temporary/invalid payment QR. Keep bank transfer and IBAN available.
+window.addEventListener('load',()=>setTimeout(()=>{
+  const qr=document.querySelector('#paymentQr img');
+  const title=document.querySelector('#paymentQr .title');
+  const hint=document.querySelector('#paymentQr .hint');
+  if(qr) qr.style.display='none';
+  if(title) title.textContent='Číslo účtu pre prevod';
+  if(hint) hint.textContent='Sumu zadaj podľa počtu objednaných obedov.';
+},100));
+
 (function(){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Bratislava',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(x=>[x.type,x.value]));const today=`${p.year}-${p.month}-${p.day}`;const hour=Number(p.hour);function add(s,n){let a=s.split('-').map(Number),d=new Date(Date.UTC(a[0],a[1]-1,a[2]+n));return d.toISOString().slice(0,10)}function wd(s){let a=s.split('-').map(Number);return new Date(Date.UTC(a[0],a[1]-1,a[2])).getUTCDay()}function next(s){do{s=add(s,1)}while(wd(s)==0||wd(s)==6);return s}let day=wd(today),weekend=day==0||day==6,evening=hour>=17,early=hour<7,preview=evening||early||weekend;if(!preview)return;let target;if(weekend){target=day==6?add(today,2):add(today,1)}else if(evening){target=next(today)}else{target=today}window.OBEDGO_PREVIEW_MODE=true;const nf=window.fetch.bind(window);window.fetch=function(i,o){let u=typeof i==='string'?i:i.url;if(u.includes('/rest/v1/daily_menu?')){let x=new URL(u,location.href);x.searchParams.set('menu_date','eq.'+target);return nf(x.toString(),o)}if(u.includes('/rest/v1/rpc/get_my_order'))return Promise.resolve(new Response('null',{status:200,headers:{'Content-Type':'application/json'}}));return nf(i,o)};window.addEventListener('load',()=>setTimeout(()=>{let s=document.getElementById('status'),b=document.getElementById('save'),c=document.getElementById('cancel'),n=document.querySelector('.notice');if(s){s.style.display='block';s.innerHTML='<b>👀 NÁHĽAD NA ĎALŠÍ PRACOVNÝ DEŇ</b><br>Objednávanie bude možné od 07:00 do 09:15.'}if(b){b.disabled=true;b.textContent='NÁHĽAD MENU'}if(c)c.style.display='none';if(n)n.textContent='Objednávanie je možné od 07:00 do 09:15. Po 17:00 ObedGo zobrazuje menu na nasledujúci pracovný deň.'},800))})();
