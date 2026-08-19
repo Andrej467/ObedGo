@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   schedule:
     # GitHub cron uses UTC. Run at both possible UTC equivalents of 17:00
-    # in Slovakia; the guard below allows only the real 17:00 local run.
+    # in Slovakia; the time check below allows only the real 17:00 local run.
     - cron: '0 15 * * 1-5'
     - cron: '0 16 * * 1-5'
 
@@ -16,26 +16,4 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check Bratislava local time
-        if: github.event_name == 'schedule'
-        run: |
-          if [ "$(TZ=Europe/Bratislava date +%H)" != "17" ]; then
-            echo "Not 17:00 in Bratislava; skipping this duplicate DST slot."
-            exit 78
-          fi
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install importer dependencies
-        run: pip install requests beautifulsoup4 pymupdf
-
-      - name: Import current 4M menu to Supabase
-        env:
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python scripts/update_menu.py
+      - name
