@@ -2,9 +2,6 @@ name: Update 4M weekly menu
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/update-menu.yml'
   schedule:
     # GitHub cron uses UTC. Run at both possible UTC equivalents of 17:00
     # in Slovakia; the local-time guard below executes only at real 17:00.
@@ -29,21 +26,21 @@ jobs:
           echo "Bratislava hour: $HOUR"
 
       - name: Checkout repository
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || steps.local_time.outputs.hour == '17'
+        if: github.event_name == 'workflow_dispatch' || steps.local_time.outputs.hour == '17'
         uses: actions/checkout@v4
 
       - name: Set up Python
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || steps.local_time.outputs.hour == '17'
+        if: github.event_name == 'workflow_dispatch' || steps.local_time.outputs.hour == '17'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install dependencies
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || steps.local_time.outputs.hour == '17'
+        if: github.event_name == 'workflow_dispatch' || steps.local_time.outputs.hour == '17'
         run: pip install requests pymupdf
 
       - name: Update menu in Supabase
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || steps.local_time.outputs.hour == '17'
+        if: github.event_name == 'workflow_dispatch' || steps.local_time.outputs.hour == '17'
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TZ: Europe/Bratislava
