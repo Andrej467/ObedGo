@@ -4,9 +4,10 @@ on:
   workflow_dispatch:
   schedule:
     # GitHub cron uses UTC. Run at both possible UTC equivalents of 17:00
-    # in Slovakia; the time check below allows only the real 17:00 local run.
-    - cron: '0 15 * * 1-5'
-    - cron: '0 16 * * 1-5'
+    # in Slovakia; the local-time guard below executes only at real 17:00.
+    # Sunday-Friday: Sunday loads the coming week, weekdays refresh current week.
+    - cron: '0 15 * * 0-5'
+    - cron: '0 16 * * 0-5'
 
 permissions:
   contents: read
@@ -16,4 +17,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name
+      - name: Check Bratislava time
+        id: local_time
+        shell: bash
+        run: |
+          HOUR=$(TZ=Europe/Bratislava date +%H)
+          echo "hour=$HOUR" >> "$GITHUB_OUTPUT"
+          echo "Bratislava hour: $HOUR"
+
+      - name: Checkout repository
+        if: github.event_name == 'workflow_dispatch' || steps.local_time.outputs.hour == '17'
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: github.event_name == 'workflow_dispatch' || steps.local_time.outputs.hour == '17'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        if: github.event_name == 'workflow_dispatch' || steps.local_time.outputs.hour == '17'
+        run: pip install requests pymupdf
+
+      - name: Update menu in Supabase
+        if: github.event_name == 'workflow_dispatch' || steps.local_time.outputs.hour == '17'
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TZ: Europe/Bratislava
+        run: python scripts/update_menu.py
