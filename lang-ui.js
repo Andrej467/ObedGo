@@ -1,0 +1,92 @@
+(function(){
+  'use strict';
+
+  const SK={
+    tag:'Obed na pár kliknutí.',
+    refresh:'🔄 OBNOVIŤ MENU',
+    nameTitle:'Tvoje meno',
+    namePlaceholder:'Meno a priezvisko',
+    mealsTitle:'Tvoje obedy',
+    mealsHint:'Môžeš objednať viac obedov. Každý obed môže mať inú polievku a menu.',
+    add:'+ PRIDAŤ ĎALŠÍ OBED',
+    noteTitle:'📝 Poznámka k objednávke',
+    noteOptional:'(voliteľné)',
+    notePlaceholder:'napr. burger bez cibule',
+    paymentTitle:'💳 Spôsob platby',
+    cash:'Hotovosť',
+    transfer:'Prevod na účet',
+    summary:'Súhrn objednávky',
+    save:'ULOŽIŤ OBJEDNÁVKU',
+    cancel:'ZRUŠIŤ OBJEDNÁVKU',
+    notice:'Objednávanie je možné od 07:00 do 09:15. Objednávku môžeš v tomto čase aj upraviť alebo zrušiť.'
+  };
+
+  const EN={
+    tag:'Lunch in just a few clicks.',
+    refresh:'🔄 REFRESH MENU',
+    nameTitle:'Your name',
+    namePlaceholder:'First and last name',
+    mealsTitle:'Your lunches',
+    mealsHint:'You can order multiple lunches. Each lunch can have a different soup and main course.',
+    add:'+ ADD ANOTHER LUNCH',
+    noteTitle:'📝 Order note',
+    noteOptional:'(optional)',
+    notePlaceholder:'e.g. burger without onions',
+    paymentTitle:'💳 Payment method',
+    cash:'Cash',
+    transfer:'Bank transfer',
+    summary:'Order summary',
+    save:'SAVE ORDER',
+    cancel:'CANCEL ORDER',
+    notice:'Ordering is available from 07:00 to 09:15. You can edit or cancel your order during this time.'
+  };
+
+  function apply(lang){
+    try{
+      const T=lang==='en'?EN:SK;
+      document.documentElement.lang=lang;
+      localStorage.setItem('obedgo-lang',lang);
+
+      const sk=document.getElementById('langSK');
+      const en=document.getElementById('langEN');
+      if(sk) sk.classList.toggle('active',lang==='sk');
+      if(en) en.classList.toggle('active',lang==='en');
+
+      const tag=document.querySelector('.tag'); if(tag) tag.textContent=T.tag;
+      const refresh=document.getElementById('refresh'); if(refresh) refresh.textContent=T.refresh;
+      const name=document.getElementById('name'); if(name) name.placeholder=T.namePlaceholder;
+      const note=document.getElementById('note'); if(note) note.placeholder=T.notePlaceholder;
+      const add=document.getElementById('add'); if(add) add.textContent=T.add;
+
+      const sections=document.querySelectorAll('.section');
+      if(sections[0]) sections[0].textContent=T.nameTitle;
+      if(sections[1]) sections[1].textContent=T.mealsTitle;
+      if(sections[2]) sections[2].innerHTML=T.noteTitle+' <span class="hint">'+T.noteOptional+'</span>';
+      if(sections[3]) sections[3].textContent=T.paymentTitle;
+
+      const hints=document.querySelectorAll('main.app > .hint');
+      if(hints[0]) hints[0].textContent=T.mealsHint;
+
+      const payLabels=document.querySelectorAll('.pay .title');
+      if(payLabels[0]) payLabels[0].textContent=T.cash;
+      if(payLabels[1]) payLabels[1].textContent=T.transfer;
+
+      const summaryLabel=document.querySelector('.summary .hint');
+      if(summaryLabel) summaryLabel.textContent=T.summary;
+
+      const save=document.getElementById('save');
+      if(save && (save.textContent==='ULOŽIŤ OBJEDNÁVKU' || save.textContent==='SAVE ORDER')) save.textContent=T.save;
+      const cancel=document.getElementById('cancel'); if(cancel) cancel.textContent=T.cancel;
+      const notice=document.querySelector('.notice'); if(notice) notice.textContent=T.notice;
+    }catch(err){
+      console.error('ObedGo language UI error:',err);
+    }
+  }
+
+  const sk=document.getElementById('langSK');
+  const en=document.getElementById('langEN');
+  if(sk) sk.addEventListener('click',function(){apply('sk')});
+  if(en) en.addEventListener('click',function(){apply('en')});
+
+  apply(localStorage.getItem('obedgo-lang')==='en'?'en':'sk');
+})();
