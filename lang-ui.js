@@ -5,29 +5,12 @@
   const EN={tag:'Lunch in just a few clicks.',refresh:'🔄 REFRESH MENU',nameTitle:'Your name',namePlaceholder:'First and last name',mealsTitle:'Your lunches',mealsHint:'You can order multiple lunches. Each lunch can have a different soup and main course.',add:'+ ADD ANOTHER LUNCH',noteTitle:'📝 Order note',noteOptional:'(optional)',notePlaceholder:'e.g. burger without onions',paymentTitle:'💳 Payment method',cash:'Cash',transfer:'Bank transfer',summary:'Order summary',save:'SAVE ORDER',cancel:'CANCEL ORDER',notice:'Ordering is available from 07:00 to 09:15. You can edit or cancel your order during this time.'};
   const DAYS={Pondelok:'Monday',Utorok:'Tuesday',Streda:'Wednesday','Štvrtok':'Thursday',Piatok:'Friday',Monday:'Pondelok',Tuesday:'Utorok',Wednesday:'Streda',Thursday:'Štvrtok',Friday:'Piatok'};
 
-  function translateDay(lang){
-    const el=document.querySelector('.hero .date');
-    if(!el)return;
-    const text=el.textContent;
-    const wanted=lang==='en'?['Pondelok','Utorok','Streda','Štvrtok','Piatok']:['Monday','Tuesday','Wednesday','Thursday','Friday'];
-    for(const day of wanted){
-      if(text.indexOf(day+' ')===0){el.textContent=DAYS[day]+text.slice(day.length);break;}
-    }
-  }
+  function translateDay(lang){const el=document.querySelector('.hero .date');if(!el)return;const text=el.textContent;const wanted=lang==='en'?['Pondelok','Utorok','Streda','Štvrtok','Piatok']:['Monday','Tuesday','Wednesday','Thursday','Friday'];for(const day of wanted){if(text.indexOf(day+' ')===0){el.textContent=DAYS[day]+text.slice(day.length);break;}}}
+  function translateLunch(lang){document.querySelectorAll('.meal-title').forEach(function(el){const m=el.textContent.match(/^(?:Obed|Lunch)\s+(\d+)$/);if(m)el.textContent=(lang==='en'?'Lunch ':'Obed ')+m[1];});}
+  function translatePreview(lang){const el=document.getElementById('status');if(!el)return;let h=el.innerHTML;if(lang==='en'){h=h.replace('NÁHĽAD NA ĎALŠÍ PRACOVNÝ DEŇ','PREVIEW OF THE NEXT WORKING DAY').replace('Objednávanie bude možné od 07:00 do 09:15.','Ordering will be available from 07:00 to 09:15.');}else{h=h.replace('PREVIEW OF THE NEXT WORKING DAY','NÁHĽAD NA ĎALŠÍ PRACOVNÝ DEŇ').replace('Ordering will be available from 07:00 to 09:15.','Objednávanie bude možné od 07:00 do 09:15.');}if(h!==el.innerHTML)el.innerHTML=h;}
+  function dynamic(lang){translateDay(lang);translateLunch(lang);translatePreview(lang);}
 
-  function apply(lang){
-    try{
-      const T=lang==='en'?EN:SK;
-      document.documentElement.lang=lang;localStorage.setItem('obedgo-lang',lang);
-      const sk=document.getElementById('langSK'),en=document.getElementById('langEN');if(sk)sk.classList.toggle('active',lang==='sk');if(en)en.classList.toggle('active',lang==='en');
-      const tag=document.querySelector('.tag');if(tag)tag.textContent=T.tag;const refresh=document.getElementById('refresh');if(refresh)refresh.textContent=T.refresh;const name=document.getElementById('name');if(name)name.placeholder=T.namePlaceholder;const note=document.getElementById('note');if(note)note.placeholder=T.notePlaceholder;const add=document.getElementById('add');if(add)add.textContent=T.add;
-      const sections=document.querySelectorAll('.section');if(sections[0])sections[0].textContent=T.nameTitle;if(sections[1])sections[1].textContent=T.mealsTitle;if(sections[2])sections[2].innerHTML=T.noteTitle+' <span class="hint">'+T.noteOptional+'</span>';if(sections[3])sections[3].textContent=T.paymentTitle;
-      const hints=document.querySelectorAll('main.app > .hint');if(hints[0])hints[0].textContent=T.mealsHint;const payLabels=document.querySelectorAll('.pay .title');if(payLabels[0])payLabels[0].textContent=T.cash;if(payLabels[1])payLabels[1].textContent=T.transfer;const summaryLabel=document.querySelector('.summary .hint');if(summaryLabel)summaryLabel.textContent=T.summary;
-      const save=document.getElementById('save');if(save&&(save.textContent==='ULOŽIŤ OBJEDNÁVKU'||save.textContent==='SAVE ORDER'))save.textContent=T.save;const cancel=document.getElementById('cancel');if(cancel)cancel.textContent=T.cancel;const notice=document.querySelector('.notice');if(notice)notice.textContent=T.notice;
-      translateDay(lang);
-      setTimeout(function(){translateDay(lang);},1200);
-    }catch(err){console.error('ObedGo language UI error:',err);}
-  }
+  function apply(lang){try{const T=lang==='en'?EN:SK;document.documentElement.lang=lang;localStorage.setItem('obedgo-lang',lang);const sk=document.getElementById('langSK'),en=document.getElementById('langEN');if(sk)sk.classList.toggle('active',lang==='sk');if(en)en.classList.toggle('active',lang==='en');const tag=document.querySelector('.tag');if(tag)tag.textContent=T.tag;const refresh=document.getElementById('refresh');if(refresh)refresh.textContent=T.refresh;const name=document.getElementById('name');if(name)name.placeholder=T.namePlaceholder;const note=document.getElementById('note');if(note)note.placeholder=T.notePlaceholder;const add=document.getElementById('add');if(add)add.textContent=T.add;const sections=document.querySelectorAll('.section');if(sections[0])sections[0].textContent=T.nameTitle;if(sections[1])sections[1].textContent=T.mealsTitle;if(sections[2])sections[2].innerHTML=T.noteTitle+' <span class="hint">'+T.noteOptional+'</span>';if(sections[3])sections[3].textContent=T.paymentTitle;const hints=document.querySelectorAll('main.app > .hint');if(hints[0])hints[0].textContent=T.mealsHint;const payLabels=document.querySelectorAll('.pay .title');if(payLabels[0])payLabels[0].textContent=T.cash;if(payLabels[1])payLabels[1].textContent=T.transfer;const summaryLabel=document.querySelector('.summary .hint');if(summaryLabel)summaryLabel.textContent=T.summary;const save=document.getElementById('save');if(save&&(save.textContent==='ULOŽIŤ OBJEDNÁVKU'||save.textContent==='SAVE ORDER'))save.textContent=T.save;const cancel=document.getElementById('cancel');if(cancel)cancel.textContent=T.cancel;const notice=document.querySelector('.notice');if(notice)notice.textContent=T.notice;dynamic(lang);setTimeout(function(){dynamic(lang);},1200);}catch(err){console.error('ObedGo language UI error:',err);}}
 
   const sk=document.getElementById('langSK'),en=document.getElementById('langEN');if(sk)sk.addEventListener('click',function(){apply('sk')});if(en)en.addEventListener('click',function(){apply('en')});apply(localStorage.getItem('obedgo-lang')==='en'?'en':'sk');
 })();
