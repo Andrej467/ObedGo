@@ -5,10 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/update-menu.yml'
+      - 'scripts/update_menu.py'
   schedule:
-    # GitHub cron uses UTC. Run at both possible UTC equivalents of 17:00
-    # in Slovakia; the local-time guard below executes only at real 17:00.
-    # Sunday-Friday: Sunday loads the coming week, weekdays refresh current week.
     - cron: '0 15 * * 0-5'
     - cron: '0 16 * * 0-5'
 
