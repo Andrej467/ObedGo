@@ -103,31 +103,39 @@ def parse_week_range(text):
 
 def validate_expected_week(start, end):
     today = datetime.now().astimezone().date()
-    # On Saturday/Sunday Superobed may already publish the following week's menu.
-    # Weekdays continue to validate the current Monday-Friday range.
     if today.weekday() >= 5:
         monday = today + timedelta(days=(7 - today.weekday()))
     else:
         monday = today - timedelta(days=today.weekday())
     friday = monday + timedelta(days=4)
-    if start != monday or end != friday:
-        raise RuntimeError(f"PDF nie je pre očakávaný pracovný týždeň: {start}–{end}, očakávam {monday}–{friday}")
+    # Allow a shortened menu week (e.g. Monday holiday), but it must belong
+    # to the expected calendar week and may not extend beyond Friday.
+    if not (monday <= start <= friday and start <= end <= friday):
+        raise RuntimeError(f"PDF nie je pre očakávaný pracovný týždeň: {start}–{end}, očakávam rozsah v {monday}–{friday}")
 
 
 def upsert_week(start, end, parsed, source_url):
+    # Anchor dates to the Monday of the PDF's calendar week. This keeps weekday
+    # labels aligned even when Superobed omits a public-holiday weekday.
+    monday = start - timedelta(days=start.weekday())
     payload = []
     for idx, day in enumerate(DAYS):
         if day not in parsed:
-            raise ValueError(f"Chýba sekcia {day}")
+            continue
+        menu_date = monday + timedelta(days=idx)
+        if menu_date < start or menu_date > end:
+            continue
         soup1, soup2, meals = parse_day(parsed[day])
         payload.append({
-            "menu_date": (start + timedelta(days=idx)).isoformat(),
+            "menu_date": menu_date.isoformat(),
             "weekday": DAY_LABELS[idx],
             "soup_1": soup1,
             "soup_2": soup2,
             "meals": meals,
             "price": PRICE,
         })
+    if not payload:
+        raise ValueError("Nenašli sa žiadne použiteľné dni menu")
     r = requests.post(
         f"{SUPABASE_URL}/rest/v1/rpc/import_weekly_menu",
         headers={"apikey": SERVICE_ROLE_KEY, "Authorization": f"Bearer {SERVICE_ROLE_KEY}", "Content-Type": "application/json"},
