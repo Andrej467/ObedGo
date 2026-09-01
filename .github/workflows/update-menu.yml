@@ -25,21 +25,17 @@ jobs:
           HOUR=$(TZ=Europe/Bratislava date +%H)
           echo "hour=$HOUR" >> "$GITHUB_OUTPUT"
           echo "Bratislava hour: $HOUR"
-
       - name: Checkout repository
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || steps.local_time.outputs.hour == '17'
         uses: actions/checkout@v4
-
       - name: Set up Python
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || steps.local_time.outputs.hour == '17'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Install dependencies
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || steps.local_time.outputs.hour == '17'
         run: pip install requests pymupdf
-
       - name: Update menu in Supabase
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || steps.local_time.outputs.hour == '17'
         env:
