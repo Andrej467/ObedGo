@@ -53,10 +53,31 @@ def parse_day(lines):
     if current: meals.append(strip_trailing_price(current))
     if not meals: raise ValueError("Nenašli sa hlavné jedlá")
     return soup1,soup2,meals
+
 def parse_week_range(text):
-    compact=clean_line(text[:1500]);m=re.search(r"(\d{1,2})\.(\d{1,2})\.?\s*[-–]\s*(\d{1,2})\.(\d{1,2})\.?(?:\s*(\d{4}))?",compact)
-    if not m: raise ValueError("Nenašiel som rozsah týždňa v hlavičke PDF")
-    d1,m1,d2,m2,year=m.groups();year=int(year or date.today().year);return date(year,int(m1),int(d1)),date(year,int(m2),int(d2))
+    # PDF text extraction can place unrelated numeric fragments near the header.
+    # Scan all date-range candidates and ignore malformed/impossible dates instead
+    # of failing on the first regex hit. This also handles shortened holiday weeks.
+    compact=clean_line(text[:2000])
+    pattern=r"(?<!\d)(\d{1,2})\.(\d{1,2})\.?\s*[-–]\s*(\d{1,2})\.(\d{1,2})\.?(?:\s*(\d{4}))?"
+    current_year=date.today().year
+    candidates=[]
+    for m in re.finditer(pattern,compact):
+        d1,m1,d2,m2,year=m.groups();year=int(year or current_year)
+        try:
+            start=date(year,int(m1),int(d1))
+            end_year=year+1 if int(m2)<int(m1) else year
+            end=date(end_year,int(m2),int(d2))
+        except ValueError:
+            continue
+        if end < start or (end-start).days > 7:
+            continue
+        candidates.append((start,end))
+    if not candidates: raise ValueError("Nenašiel som platný rozsah týždňa v hlavičke PDF")
+    today=datetime.now().astimezone().date()
+    expected_monday=today+timedelta(days=(7-today.weekday())) if today.weekday()>=5 else today-timedelta(days=today.weekday())
+    return min(candidates,key=lambda x:abs((x[0]-expected_monday).days))
+
 def validate_expected_week(start,end):
     today=datetime.now().astimezone().date();monday=today+timedelta(days=(7-today.weekday())) if today.weekday()>=5 else today-timedelta(days=today.weekday());friday=monday+timedelta(days=4)
     if not(monday<=start<=friday and start<=end<=friday): raise RuntimeError(f"PDF nie je pre očakávaný pracovný týždeň: {start}–{end}, očakávam rozsah v {monday}–{friday}")
