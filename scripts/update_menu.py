@@ -54,16 +54,23 @@ def parse_day(lines):
     if not meals: raise ValueError("Nenašli sa hlavné jedlá")
     return soup1,soup2,meals
 
+def expected_week():
+    today=datetime.now().astimezone().date()
+    monday=today+timedelta(days=(7-today.weekday())) if today.weekday()>=5 else today-timedelta(days=today.weekday())
+    return monday,monday+timedelta(days=4)
+
 def parse_week_range(text):
-    # PDF text extraction can place unrelated numeric fragments near the header.
-    # Scan all date-range candidates and ignore malformed/impossible dates instead
-    # of failing on the first regex hit. This also handles shortened holiday weeks.
-    compact=clean_line(text[:2000])
-    pattern=r"(?<!\d)(\d{1,2})\.(\d{1,2})\.?\s*[-–]\s*(\d{1,2})\.(\d{1,2})\.?(?:\s*(\d{4}))?"
+    compact=clean_line(text[:2500])
+    pattern=r"(?<!\d)(\d{1,2})\.(\d{1,2})\.?\s*[-–]\s*(\d{1,2})\.(\d{1,2})\.?(?:\s*(\d{2,4}))?"
     current_year=date.today().year
     candidates=[]
     for m in re.finditer(pattern,compact):
-        d1,m1,d2,m2,year=m.groups();year=int(year or current_year)
+        d1,m1,d2,m2,year=m.groups()
+        if year:
+            year=int(year)
+            if year<100: year+=2000
+        else:
+            year=current_year
         try:
             start=date(year,int(m1),int(d1))
             end_year=year+1 if int(m2)<int(m1) else year
@@ -73,13 +80,14 @@ def parse_week_range(text):
         if end < start or (end-start).days > 7:
             continue
         candidates.append((start,end))
-    if not candidates: raise ValueError("Nenašiel som platný rozsah týždňa v hlavičke PDF")
-    today=datetime.now().astimezone().date()
-    expected_monday=today+timedelta(days=(7-today.weekday())) if today.weekday()>=5 else today-timedelta(days=today.weekday())
-    return min(candidates,key=lambda x:abs((x[0]-expected_monday).days))
+    exp_start,exp_end=expected_week()
+    if not candidates:
+        print(f"WARN: rozsah dátumov v PDF sa nepodarilo spoľahlivo prečítať; používam očakávaný týždeň {exp_start}–{exp_end}")
+        return exp_start,exp_end
+    return min(candidates,key=lambda x:abs((x[0]-exp_start).days))
 
 def validate_expected_week(start,end):
-    today=datetime.now().astimezone().date();monday=today+timedelta(days=(7-today.weekday())) if today.weekday()>=5 else today-timedelta(days=today.weekday());friday=monday+timedelta(days=4)
+    monday,friday=expected_week()
     if not(monday<=start<=friday and start<=end<=friday): raise RuntimeError(f"PDF nie je pre očakávaný pracovný týždeň: {start}–{end}, očakávam rozsah v {monday}–{friday}")
 def upsert_week(start,end,parsed,source_url):
     monday=start-timedelta(days=start.weekday());friday=monday+timedelta(days=4);payload=[]
@@ -93,7 +101,9 @@ def upsert_week(start,end,parsed,source_url):
     if not r.ok: raise RuntimeError(f"Supabase import zlyhal: {r.status_code} {r.text}")
     print(json.dumps(r.json(),ensure_ascii=False,indent=2))
 def main():
-    url,pdf=fetch_pdf_url();text=pdf_text(pdf);start,end=parse_week_range(text);validate_expected_week(start,end);sections=split_sections(text);print("Zdroj:",url);print("Týždeň:",start,"-",end);print("Nájdené dni:",sorted(sections));upsert_week(start,end,sections,url);print("ObedGo: týždenné menu bolo úspešne aktualizované.")
+    url,pdf=fetch_pdf_url();text=pdf_text(pdf);sections=split_sections(text);print("Zdroj:",url);print("Nájdené dni:",sorted(sections));
+    if not sections: raise ValueError("V PDF sa nenašli žiadne dni menu")
+    start,end=parse_week_range(text);validate_expected_week(start,end);print("Týždeň:",start,"-",end);upsert_week(start,end,sections,url);print("ObedGo: týždenné menu bolo úspešne aktualizované.")
 if __name__=="__main__":
     try: main()
     except Exception as e: print("ERROR:",e,file=sys.stderr);sys.exit(1)
