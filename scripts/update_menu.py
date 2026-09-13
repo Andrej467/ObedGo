@@ -37,13 +37,14 @@ def split_sections(text):
     return sections
 def strip_trailing_price(text): return re.sub(r"\s+\d+[\.,]\d{2}\s*€.*$","",text).strip()
 def parse_day(lines):
-    menu_start=next((i for i,x in enumerate(lines) if re.match(r"^MENU\s*1\s*:",x,re.I)),None)
+    menu_start=next((i for i,x in enumerate(lines) if re.match(r"^MENU\s*1\b",x,re.I)),None)
     if menu_start is None: raise ValueError("Chýba MENU 1")
     soup_lines=[strip_trailing_price(x) for x in lines[:menu_start] if not re.match(r"^(PRE VEGETARIÁNOV|PRE VEGETARIANOV)",x,re.I)]
+    soup_lines=[x for x in soup_lines if x]
     if len(soup_lines)<2: raise ValueError("Nenašli sa dve polievky")
     soup1,soup2=soup_lines[0],soup_lines[1];meals=[];current=None
     for x in lines[menu_start:]:
-        m=re.match(r"^MENU\s*(\d+)\s*:\s*(.*)$",x,re.I)
+        m=re.match(r"^MENU\s*(\d+)\s*(?::|[-–])?\s*(.*)$",x,re.I)
         if m:
             if current: meals.append(strip_trailing_price(current))
             current=f"MENU {m.group(1)} – {clean_line(m.group(2))}"
@@ -95,7 +96,12 @@ def upsert_week(start,end,parsed,source_url):
         if day not in parsed: continue
         menu_date=monday+timedelta(days=idx)
         if menu_date<start or menu_date>end: continue
-        soup1,soup2,meals=parse_day(parsed[day]);payload.append({"menu_date":menu_date.isoformat(),"weekday":DAY_LABELS[idx],"soup_1":soup1,"soup_2":soup2,"meals":meals,"price":PRICE})
+        try:
+            soup1,soup2,meals=parse_day(parsed[day])
+        except ValueError as e:
+            print(f"WARN: preskakujem {DAY_LABELS[idx]} {menu_date}: {e}")
+            continue
+        payload.append({"menu_date":menu_date.isoformat(),"weekday":DAY_LABELS[idx],"soup_1":soup1,"soup_2":soup2,"meals":meals,"price":PRICE})
     if not payload: raise ValueError("Nenašli sa žiadne použiteľné dni menu")
     r=requests.post(f"{SUPABASE_URL}/rest/v1/rpc/import_weekly_menu",headers={"apikey":SERVICE_ROLE_KEY,"Authorization":f"Bearer {SERVICE_ROLE_KEY}","Content-Type":"application/json"},json={"p_week_start":monday.isoformat(),"p_week_end":friday.isoformat(),"p_source_url":source_url,"p_rows":payload},timeout=30)
     if not r.ok: raise RuntimeError(f"Supabase import zlyhal: {r.status_code} {r.text}")
