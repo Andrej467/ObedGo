@@ -7,8 +7,11 @@ on:
       - '.github/workflows/update-menu.yml'
       - 'scripts/update_menu.py'
   schedule:
+    # GitHub cron is UTC. Multiple evening attempts make the import robust
+    # to delayed Superobed publication and daylight-saving time changes.
     - cron: '0 15 * * 0-5'
     - cron: '0 16 * * 0-5'
+    - cron: '0 18 * * 0'
 
 permissions:
   contents: read
